@@ -135,21 +135,23 @@ length(activityData[!complete.cases(activityData),"Steps"])
 ## [1] 2304
 ```
 
-To fill the empty values we will use the average per weekday. So for example, if there is a missing value for Monday, we will replace that with the average steps the person makes every Monday.
+To fill the empty values we will use the average per weekday and interval. So for example, if there is a missing value for Monday's interval 800, we will replace that with the average steps the person makes every Monday for the 800th 5-min interval.
 
 
 
 ```r
-# calculate average per weekday
-averageWeekDaySteps <- tapply(clearActivityData$Steps, weekdays(clearActivityData$Date), FUN=mean)
-
 # copy original data
 newActivityData <- activityData
+
+# calculate average per weekday interval
+avgWDSteps <- aggregate(Steps~Interval+weekdays(Date), activityData, mean)
+names(avgWDSteps) <- c("Interval","Day","AvgSteps")
 
 # replace NA values
 for(r in 1:nrow(activityData)){
         if(is.na(activityData$Steps[r])){
-                newActivityData$Steps[r] <- averageWeekDaySteps[weekdays(activityData$Date[r])]
+                newActivityData$Steps[r] <- avgWDSteps$AvgSteps[avgWDSteps$Day == weekdays(activityData$Date[r]) 
+                                                                & avgWDSteps$Interval == activityData$Interval[r]]
         }
 }
 ```
@@ -194,18 +196,15 @@ For this part of the assigment we examine the differences in activity patterns b
 
 
 ```r
-# create weekend/weekday factor
-daytypeFactor <- factor(c("Weekend","Weekday"), labels = c("Weekend","Weekday"))
-
-# set days in data frame column
-newActivityData$Daytype <- as.factor(ifelse(weekdays(newActivityData$Date) %in% c("Saturday","Sunday"),"Weekend","Weekday"))
+# set day category in new data frame factor column
+newActivityData$DayCat <- as.factor(ifelse(weekdays(newActivityData$Date) %in% c("Saturday","Sunday"),"Weekend","Weekday"))
 
 # get average steps grouping by intervals and day types(weekday/weekend)
-newAveragedSteps <- aggregate(Steps~Interval+Daytype, newActivityData, mean)
+newAveragedSteps <- aggregate(Steps~Interval+DayCat, newActivityData, mean)
 
 # create plot of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all weekday days or weekend days (y-axis)
 library(lattice)
-xyplot( Steps ~ Interval | Daytype, data = newAveragedSteps, type="l", ylab="Number of steps", layout = c(1,2) )
+xyplot( Steps ~ Interval | DayCat, data = newAveragedSteps, type="l", ylab="Number of steps", layout = c(1,2) )
 ```
 
 ![plot of chunk compareActivityPatterns](figure/compareActivityPatterns.png) 
